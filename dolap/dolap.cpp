@@ -1,47 +1,67 @@
 #include "dolap.h"
 #include <iostream>
+#include <string>
 
-Dolap::Dolap(int _id, int _dolapNo, std::string _bolum) {
-    id = _id;
-    dolapNo = _dolapNo;
-    doluMu = false;
-    kullananUyeId = 0;
-    bolum = _bolum;
-}
+using namespace std;
 
-bool Dolap::uyeAta(int uyeId) {
-    if (doluMu) {
-        std::cout << "Dolap " << dolapNo << " zaten dolu!\n";
-        return false;
+void Dolap::listele(Veritabani& db, Uye& aktifUye) {
+    if (!db.getBagliMi()) return;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, db.getHDbc(), &hStmt);
+    string filtre = "";
+    if (aktifUye.getRol() != "admin" && aktifUye.getCinsiyet() != "") {
+        filtre = " WHERE d.Bolum = '" + aktifUye.getCinsiyet() + "'";
     }
-    kullananUyeId = uyeId;
-    doluMu = true;
-    std::cout << "Dolap " << dolapNo << " uyeye atandi (Uye ID: " << uyeId << ")\n";
-    return true;
-}
+    string sorgu = "SELECT d.DolapID, d.DolapNo, d.Bolum, d.Durum, ISNULL(u.Ad + ' ' + u.Soyad, '') FROM Dolaplar d LEFT JOIN Uyeler u ON d.KullananUyeID = u.UyeID" + filtre;
+    SQLRETURN ret = SQLExecDirect(hStmt, (SQLCHAR*)sorgu.c_str(), SQL_NTS);
 
-void Dolap::bosalt() {
-    if (!doluMu) {
-        std::cout << "Dolap " << dolapNo << " zaten bos!\n";
-        return;
+    if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) {
+        SQLINTEGER id, no, durum;
+        SQLCHAR bolum[20], kullanan[100];
+        SQLLEN ind;
+
+        cout << "\n--- SOYUNMA ODASI DOLAPLARI ---\n";
+        cout << "ID\tDolap No\tBolum\tDurum\tKullanan\n";
+        cout << "--------------------------------------------------------\n";
+        SQLRETURN fetchRet;
+        while ((fetchRet = SQLFetch(hStmt)) == SQL_SUCCESS || fetchRet == SQL_SUCCESS_WITH_INFO) {
+            SQLGetData(hStmt, 1, SQL_C_LONG, &id, 0, &ind);
+            SQLGetData(hStmt, 2, SQL_C_LONG, &no, 0, &ind);
+            SQLGetData(hStmt, 3, SQL_C_CHAR, bolum, 20, &ind);
+            SQLGetData(hStmt, 4, SQL_C_LONG, &durum, 0, &ind);
+            SQLGetData(hStmt, 5, SQL_C_CHAR, kullanan, 100, &ind);
+
+            string durumStr = (durum == 1) ? "[DOLU]" : "[BOS] ";
+            string kullananStr = (durum == 1) ? (char*)kullanan : "-";
+
+            cout << id << "\t" << no << "\t\t" << bolum << "\t" << durumStr << "\t" << kullananStr << "\n";
+        }
+        cout << "--------------------------------------------------------\n";
     }
-    std::cout << "Dolap " << dolapNo << " bosaltildi (Eski Uye ID: " << kullananUyeId << ")\n";
-    kullananUyeId = 0;
-    doluMu = false;
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
 
-int Dolap::getDurum() {
-    return doluMu ? 1 : 0;
+bool Dolap::kullan(Veritabani& db, Uye& aktifUye, int dolapId) {
+    if (!db.getBagliMi() || aktifUye.getId() == 0) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, db.getHDbc(), &hStmt);
+    string sorgu = "UPDATE Dolaplar SET Durum = 1, KullananUyeID = " + to_string(aktifUye.getId()) + " WHERE DolapID = " + to_string(dolapId) + " AND Durum = 0 AND Bolum = '" + aktifUye.getCinsiyet() + "'";
+    SQLRETURN ret = SQLExecDirect(hStmt, (SQLCHAR*)sorgu.c_str(), SQL_NTS);
+    SQLLEN rowCount = 0;
+    SQLRowCount(hStmt, &rowCount);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
 }
 
-void Dolap::durumGoster() {
-    std::cout << "Dolap No: " << dolapNo << " | Bolum: " << bolum
-              << " | Durum: " << (doluMu ? "DOLU" : "BOS");
-    if (doluMu) std::cout << " | Uye ID: " << kullananUyeId;
-    std::cout << "\n";
+bool Dolap::birak(Veritabani& db, Uye& aktifUye, int dolapId) {
+    if (!db.getBagliMi() || aktifUye.getId() == 0) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, db.getHDbc(), &hStmt);
+    string adminSarti = (aktifUye.getRol() == "admin") ? "" : " AND KullananUyeID = " + to_string(aktifUye.getId());
+    string sorgu = "UPDATE Dolaplar SET Durum = 0, KullananUyeID = NULL WHERE DolapID = " + to_string(dolapId) + adminSarti;
+    SQLRETURN ret = SQLExecDirect(hStmt, (SQLCHAR*)sorgu.c_str(), SQL_NTS);
+    SQLLEN rowCount = 0;
+    SQLRowCount(hStmt, &rowCount);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
 }
-
-int Dolap::getId() { return id; }
-int Dolap::getDolapNo() { return dolapNo; }
-std::string Dolap::getBolum() { return bolum; }
-int Dolap::getKullananUyeId() { return kullananUyeId; }

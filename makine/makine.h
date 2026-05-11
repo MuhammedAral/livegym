@@ -1,17 +1,10 @@
 #pragma once
-#include <string>
+#include "../veritabani/veritabani.h"
+#include "../uye/uye.h"
 
 class Makine {
-private:
-    int id;
-    std::string ad;
-    bool doluMu;
-
 public:
-    Makine(int _id, std::string _ad);
-    void kullanilmayaBaslandi();
-    void bosaCikti();
-    int getSensorDurumu();
-    int getId();
-    std::string getAd();
+    static void listele(Veritabani& db);
+    static bool kullan(Veritabani& db, Uye& aktifUye, int makineId);
+    static bool birak(Veritabani& db, Uye& aktifUye, int makineId);
 };

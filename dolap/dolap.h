@@ -1,22 +1,10 @@
 #pragma once
-#include <string>
+#include "../veritabani/veritabani.h"
+#include "../uye/uye.h"
 
 class Dolap {
-private:
-    int id;
-    int dolapNo;
-    bool doluMu;
-    int kullananUyeId; // dolabi kullanan uyenin id'si, 0 ise bos
-    std::string bolum; // "Erkek" veya "Kadin"
-
 public:
-    Dolap(int _id, int _dolapNo, std::string _bolum);
-    bool uyeAta(int uyeId);   // dolabi bir uyeye atar
-    void bosalt();             // dolabi bosaltir
-    int getDurum();            // 1 dolu, 0 bos
-    void durumGoster();
-    int getId();
-    int getDolapNo();
-    std::string getBolum();
-    int getKullananUyeId();
+    static void listele(Veritabani& db, Uye& aktifUye);
+    static bool kullan(Veritabani& db, Uye& aktifUye, int dolapId);
+    static bool birak(Veritabani& db, Uye& aktifUye, int dolapId);
 };

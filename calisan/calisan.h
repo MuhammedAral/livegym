@@ -1,24 +1,10 @@
 #pragma once
-#include <string>
-#include <vector>
+#include "../veritabani/veritabani.h"
+#include "../uye/uye.h"
 
 class Calisan {
-private:
-    int id;
-    std::string ad;
-    std::string soyad;
-    std::string pozisyon; // Antrenor, Resepsiyonist, Temizlik
-    std::vector<int> sorumluUyeler; // atanan uyelerin id listesi
-
 public:
-    Calisan(int _id, std::string _ad, std::string _soyad, std::string _pozisyon);
-    void uyeAta(int uyeId);
-    void uyeCikar(int uyeId);
-    void sorumluListele();
-    void bilgiGoster();
-    int getId();
-    std::string getAd();
-    std::string getSoyad();
-    std::string getPozisyon();
-    int getSorumluSayisi();
+    static bool cagir(Veritabani& db, Uye& aktifUye);
+    static void cagrilarGoster(Veritabani& db);
+    static bool cagriTamamla(Veritabani& db, int cagriId);
 };
